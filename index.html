@@ -1,12 +1,218 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>WebDesign</title>
-  </head>
-  <bod>
-    <h1>My Name is Moses</h1>
-    <p>The following snippet represents the absolute baseline Structure required for any web asset to satisfy modern
-standards compliance checkers:</p>
-  </bod>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jiji.co.ke Clone - Buy & Sell Online in Kenya</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-light">
 
+    <!-- Top Bar -->
+    <div class="bg-white border-bottom py-1 small d-none d-md-block">
+        <div class="container d-flex justify-content-between align-items: center">
+            <span class="text-muted">Kenya's Largest Classifieds Marketplace</span>
+            <ul class="nav">
+                <li class="nav-item"><a href="#" class="nav-link text-dark py-0">Help</a></li>
+                <li class="nav-item"><a href="#" class="nav-link text-dark py-0">Safety tips</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm py-3">
+        <div class="container">
+            <!-- Brand Logo -->
+            <a class="navbar-brand fw-bold text-success fs-3" href="#">
+                Jiji<span class="text-warning">.co.ke</span>
+            </a>
+
+            <!-- Mobile Toggle Button -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Nav Content -->
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <div class="input-group mx-lg-4 my-2 my-lg-0 w-50">
+                    <span class="input-group-text bg-white border-end-0"><i class="fa fa-search text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 ps-0" placeholder="I am looking for...">
+                    <button class="btn btn-success" type="button">Search</button>
+                </div>
+                <ul class="navbar-nav ms-auto align-items-lg-center">
+                    <li class="nav-item me-3">
+                        <a href="#" class="nav-link text-dark"><i class="fa fa-user me-1"></i> Sign in / Register</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="btn btn-warning text-dark fw-bold px-4 rounded-pill shadow-sm">
+                            <i class="fa fa-plus me-1"></i> SELL
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Categories Sub-Header Bar -->
+    <div class="bg-white shadow-sm mb-4 py-2 d-none d-md-block overflow-auto">
+        <div class="container">
+            <ul class="nav justify-content-between text-nowrap">
+                <li class="nav-item"><a href="#" class="nav-link text-dark small fw-semibold"><i class="fa fa-car text-success me-1"></i> Vehicles</a></li>
+                <li class="nav-item"><a href="#" class="nav-link text-dark small fw-semibold"><i class="fa fa-laptop text-success me-1"></i> Property</a></li>
+                <li class="nav-item"><a href="#" class="nav-link text-dark small fw-semibold"><i class="fa fa-mobile text-success me-1"></i> Mobile Phones</a></li>
+                <li class="nav-item"><a href="#" class="nav-link text-dark small fw-semibold"><i class="fa fa-couch text-success me-1"></i> Home & Furniture</a></li>
+                <li class="nav-item"><a href="#" class="nav-link text-dark small fw-semibold"><i class="fa fa-tshirt text-success me-1"></i> Fashion</a></li>
+                <li class="nav-item"><a href="#" class="nav-link text-dark small fw-semibold"><i class="fa fa-briefcase text-success me-1"></i> Services</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Content Section -->
+    <div class="container my-4">
+        
+        <!-- Hero Banner Section -->
+        <div class="p-5 mb-4 bg-success text-white rounded-3 shadow-sm position-relative overflow-hidden">
+            <div class="container-fluid py-3">
+                <h1 class="display-5 fw-bold">The Marketplace That Never Sleeps</h1>
+                <p class="col-md-8 fs-4">Buy and sell everything from used cars to electronics safely across Kenya.</p>
+                <button class="btn btn-warning btn-lg fw-bold text-dark mt-2" type="button">Start Selling Now</button>
+            </div>
+        </div>
+
+        <!-- Product Grid Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="fw-bold text-secondary">Popular Ads</h3>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle btn-sm" type="button" data-bs-toggle="dropdown">
+                    Sort by: Most Recent
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#">Most Recent</a></li>
+                    <li><a class="dropdown-item" href="#">Price: Low to High</a></li>
+                    <li><a class="dropdown-item" href="#">Price: High to Low</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Dynamic Product Grid (jQuery populated or static cards) -->
+        <div class="row g-4" id="product-grid">
+            <!-- Product Item Card 1 -->
+            <div class="col-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm product-card">
+                    <div class="position-relative">
+                        <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Product">
+                        <span class="badge bg-warning text-dark position-absolute top-0 start-0 m-2">VIP</span>
+                        <button class="btn btn-light btn-sm rounded-circle position-absolute top-0 end-0 m-2 text-danger fav-btn"><i class="fa fa-heart"></i></button>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title text-truncate">iPhone 13 Pro Max - 256GB - Graphite</h6>
+                        <h5 class="text-success fw-bold mb-1">KES 85,000</h5>
+                        <p class="card-text text-muted small mb-3"><i class="fa fa-map-marker-alt me-1"></i> Nairobi, CBD</p>
+                        <button class="btn btn-outline-success btn-sm mt-auto view-contact-btn">Show Contacts</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Item Card 2 -->
+            <div class="col-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm product-card">
+                    <div class="position-relative">
+                        <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Product">
+                        <button class="btn btn-light btn-sm rounded-circle position-absolute top-0 end-0 m-2 text-muted fav-btn"><i class="fa fa-heart"></i></button>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title text-truncate">Toyota Alphard 2015, White</h6>
+                        <h5 class="text-success fw-bold mb-1">KES 2,450,000</h5>
+                        <p class="card-text text-muted small mb-3"><i class="fa fa-map-marker-alt me-1"></i> Mombasa, Nyali</p>
+                        <button class="btn btn-outline-success btn-sm mt-auto view-contact-btn">Show Contacts</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Item Card 3 -->
+            <div class="col-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm product-card">
+                    <div class="position-relative">
+                        <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Product">
+                        <span class="badge bg-success position-absolute top-0 start-0 m-2">PRO</span>
+                        <button class="btn btn-light btn-sm rounded-circle position-absolute top-0 end-0 m-2 text-muted fav-btn"><i class="fa fa-heart"></i></button>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title text-truncate">HP EliteBook 840 G5 Core i5</h6>
+                        <h5 class="text-success fw-bold mb-1">KES 38,000</h5>
+                        <p class="card-text text-muted small mb-3"><i class="fa fa-map-marker-alt me-1"></i> Nakuru, Town</p>
+                        <button class="btn btn-outline-success btn-sm mt-auto view-contact-btn">Show Contacts</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Item Card 4 -->
+            <div class="col-6 col-md-3">
+                <div class="card h-100 border-0 shadow-sm product-card">
+                    <div class="position-relative">
+                        <img src="https://via.placeholder.com/300x200" class="card-img-top" alt="Product">
+                        <button class="btn btn-light btn-sm rounded-circle position-absolute top-0 end-0 m-2 text-muted fav-btn"><i class="fa fa-heart"></i></button>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title text-truncate">3 Bedroom Apartment for Rent in Kilimani</h6>
+                        <h5 class="text-success fw-bold mb-1">KES 75,000 /mo</h5>
+                        <p class="card-text text-muted small mb-3"><i class="fa fa-map-marker-alt me-1"></i> Nairobi, Kilimani</p>
+                        <button class="btn btn-outline-success btn-sm mt-auto view-contact-btn">Show Contacts</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white pt-5 pb-3 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h5 class="text-success fw-bold">Jiji.co.ke</h5>
+                    <p class="text-muted small">Sell and buy items quickly, easily, and locally. The best marketplace in Kenya.</p>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <h6 class="fw-bold">About Us</h6>
+                    <ul class="list-unstyled small text-muted">
+                        <li><a href="#" class="text-decoration-none text-muted">About Jiji</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted">Careers</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted">Terms & Conditions</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <h6 class="fw-bold">Support</h6>
+                    <ul class="list-unstyled small text-muted">
+                        <li><a href="#" class="text-decoration-none text-muted">Help Center</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted">Safety Tips</a></li>
+                        <li><a href="#" class="text-decoration-none text-muted">Contact Us</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h6 class="fw-bold">Download our app</h6>
+                    <p class="text-muted small">Get access to the best deals on the go!</p>
+                    <button class="btn btn-outline-light btn-sm me-2"><i class="fab fa-apple"></i> App Store</button>
+                    <button class="btn btn-outline-light btn-sm"><i class="fab fa-google-play"></i> Google Play</button>
+                </div>
+            </div>
+            <hr class="border-secondary">
+            <div class="text-center small text-muted">
+                &copy; 2026 Jiji Clone. Built with Bootstrap 5 & jQuery.
+            </div>
+        </div>
+    </footer>
+
+    <!-- jQuery Script CDN -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script src="script.js"></script>
+</body>
 </html>

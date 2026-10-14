@@ -1,0 +1,24 @@
+/* Custom styling overrides for Jiji Clone */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.product-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.product-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}
+
+.product-card img {
+    height: 180px;
+    object-fit: cover;
+}
+
+/* Category sub-header clean scroll */
+.overflow-auto::-webkit-scrollbar {
+    display: none;
+}

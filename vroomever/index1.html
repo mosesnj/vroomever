@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LETTO — Verified Rentals, Airbnbs & Hotels in Kenya</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet GIS Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --primary-color: #FF385C;
+            --secondary-color: #0F172A;
+            --accent-blue: #0284C7;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #F8FAFC;
+            color: #1E293B;
+        }
+        .bg-primary-custom { background-color: var(--primary-color) !important; }
+        .text-primary-custom { color: var(--primary-color) !important; }
+        .bg-navy { background-color: var(--secondary-color) !important; }
+        .text-navy { color: var(--secondary-color) !important; }
+        
+        /* Navbar */
+        .navbar { border-bottom: 1px solid #E2E8F0; }
+        
+        /* Property Card */
+        .property-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+            border: 1px solid #E2E8F0;
+        }
+        .property-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px -10px rgba(15, 23, 42, 0.15);
+        }
+        .property-img-wrapper {
+            height: 220px;
+            overflow: hidden;
+            position: relative;
+        }
+        .property-img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+        .property-card:hover .property-img-wrapper img {
+            transform: scale(1.05);
+        }
+        
+        /* Verified Badge (InStay Style) */
+        .verified-badge {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(4px);
+            color: #38BDF8;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+        
+        /* GIS Map Modal container */
+        #gisMap {
+            height: 350px;
+            width: 100%;
+            border-radius: 12px;
+        }
+
+        /* Chat Widget */
+        #chatWidget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1050;
+            width: 340px;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        
+        /* Print layout for Tenancy Contract */
+        @media print {
+            body * { visibility: hidden; }
+            #printableContract, #printableContract * { visibility: visible; }
+            #printableContract { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Announcement Bar -->
+    <div class="bg-navy text-white py-1 px-3 small d-none d-md-block">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span><i class="fa fa-shield-alt text-info me-1"></i> GeoDjango Backed & Engineer-Verified Property Inspections (No Fakes, No Scams)</span>
+            <div class="d-flex gap-3">
+                <a href="#" class="text-white text-decoration-none">Landlord Portal</a>
+                <a href="#" class="text-white text-decoration-none">Support</a>
+                <span><i class="fa fa-phone-alt text-danger me-1"></i> +254 700 LETTO</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top py-3">
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-3 text-navy d-flex align-items-center gap-2" href="#" onclick="showHome()">
+                <div class="bg-primary-custom text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    <i class="fa fa-home"></i>
+                </div>
+                LETTO<span class="text-primary-custom">.</span>
+            </a>
+
+            <!-- Mobile Action Icons -->
+            <div class="d-flex align-items-center gap-2 d-lg-none">
+                <button class="btn btn-outline-dark btn-sm rounded-pill px-3" data-bs-toggle="offcanvas" data-bs-target="#filterDrawer">
+                    <i class="fa fa-filter text-primary-custom me-1"></i> Filter <span class="badge bg-primary-custom rounded-pill" id="mobileFilterCount">0</span>
+                </button>
+                <button class="btn btn-dark btn-sm rounded-pill" onclick="openGisModal()">
+                    <i class="fa fa-map-marked-alt text-info"></i> GIS
+                </button>
+            </div>
+
+            <!-- Desktop Search & Navigation -->
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <div class="mx-auto w-50 d-none d-lg-flex">
+                    <div class="input-group shadow-sm rounded-pill overflow-hidden border">
+                        <span class="input-group-text bg-white border-0 ps-3"><i class="fa fa-search text-muted"></i></span>
+                        <input type="text" id="globalSearchInput" class="form-control border-0 shadow-none" placeholder="Search location, apartment, or hotel name...">
+                        <button class="btn btn-primary-custom text-white px-4 fw-semibold" type="button" onclick="filterListings()">Search</button>
+                    </div>
+                </div>
+                <ul class="navbar-nav ms-auto align-items-center gap-3">
+                    <li class="nav-item d-none d-lg-block">
+                        <button class="btn btn-outline-dark rounded-pill btn-sm px-3 fw-semibold" onclick="openGisModal()">
+                            <i class="fa fa-map-marker-alt text-danger me-1"></i> GIS Map & AI Radius Search
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-dark rounded-pill btn-sm px-3 fw-semibold" data-bs-toggle="offcanvas" data-bs-target="#filterDrawer">
+                            <i class="fa fa-sliders-h text-warning me-1"></i> Filters <span class="badge bg-danger rounded-pill" id="desktopFilterCount">0</span>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="btn btn-primary-custom text-white fw-bold px-4 rounded-pill shadow-sm btn-sm">
+                            List Property
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Categories / Tabs Bar -->
+    <div class="bg-white border-bottom py-2 sticky-top shadow-sm" style="top: 73px; z-index: 1020;">
+        <div class="container d-flex align-items-center justify-content-between overflow-auto gap-4 py-1" style="white-space: nowrap;">
+            <div class="d-flex gap-4 align-items-center" id="categoryTabs">
+                <button class="btn btn-sm fw-semibold text-dark border-0 pb-2 active border-bottom border-3 border-danger rounded-0" onclick="selectCategory('all', this)"><i class="fa fa-th-large me-1 text-danger"></i> All Stays</button>
+                <button class="btn btn-sm fw-semibold text-muted border-0 pb-2 rounded-0" onclick="selectCategory('Bedsitter', this)"><i class="fa fa-door-open me-1 text-success"></i> Bedsitters</button>
+                <button class="btn btn-sm fw-semibold text-muted border-0 pb-2 rounded-0" onclick="selectCategory('1 Bedroom', this)"><i class="fa fa-bed me-1 text-primary"></i> 1 Bedroom</button>
+                <button class="btn btn-sm fw-semibold text-muted border-0 pb-2 rounded-0" onclick="selectCategory('2 Bedroom', this)"><i class="fa fa-hotel me-1 text-warning"></i> 2 Bedroom</button>
+                <button class="btn btn-sm fw-semibold text-muted border-0 pb-2 rounded-0" onclick="selectCategory('3 Bedroom', this)"><i class="fa fa-building me-1 text-info"></i> 3 Bedroom + DSQ</button>
+                <button class="btn btn-sm fw-semibold text-muted border-0 pb-2 rounded-0" onclick="selectCategory('Airbnb', this)"><i class="fa fa-umbrella-beach me-1 text-danger"></i> Airbnb</button>
+                <button class="btn btn-sm fw-semibold text-muted border-0 pb-2 rounded-0" onclick="selectCategory('Hotel', this)"><i class="fa fa-concierge-bell me-1 text-secondary"></i> Hotels</button>
+            </div>
+            <div class="d-none d-md-flex align-items-center gap-2 small text-muted">
+                <i class="fa fa-shield-check text-success"></i> GeoDjango Spatial Filter Enabled
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dynamic View Container -->
+    <div class="container my-4" id="mainAppContainer">
+        
+        <!-- Hero Banner / GIS Notice -->
+        <div class="p-4 p-lg-5 mb-4 bg-navy text-white rounded-4 shadow-sm position-relative overflow-hidden">
+            <div class="row align-items-center">
+                <div class="col-lg-7">
+                    <span class="badge bg-primary-custom text-white mb-2 px-3 py-1 rounded-pill">GeoDjango + OpenStreetMap GIS Engine</span>
+                    <h1 class="display-6 fw-bold mb-3">Find Verified Homes, Airbnbs & Hotels in Kenya</h1>
+                    <p class="text-white-55 mb-4">Every property is GIS-mapped with verified water utility security (Borehole/Council), AI proximity filters for schools & hospitals, and instant M-Pesa checkout.</p>
+                    <button class="btn btn-primary-custom text-white fw-bold px-4 py-2 rounded-pill shadow" onclick="openGisModal()">
+                        <i class="fa fa-map-marker-alt me-2"></i> Launch GIS Radius Search
+                    </button>
+                </div>
+                <div class="col-lg-5 text-center d-none d-lg-block">
+                    <img src="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80" class="img-fluid rounded-4 shadow" alt="Property">
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Status Notification Bar -->
+        <div id="activeFilterAlert" class="alert alert-light border d-none justify-content-between align-items-center mb-4">
+            <div><i class="fa fa-filter text-primary-custom me-2"></i> Active Filter: <span id="filterDescription" class="fw-bold">None</span></div>
+            <button class="btn btn-sm btn-outline-secondary rounded-pill" onclick="clearAllFilters()">Reset Filters</button>
+        </div>
+
+        <!-- Listing Header -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold text-navy m-0">Available Listings (<span id="listingCount">0</span>)</h4>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle btn-sm rounded-pill px-3" type="button" data-bs-toggle="dropdown">
+                    Sort by: Recommended
+                </button>
+                <ul class="dropdown-menu shadow border-0">
+                    <li><a class="dropdown-item" href="#" onclick="sortListings('default')">Recommended</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="sortListings('price-low')">Price: Low to High</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="sortListings('price-high')">Price: High to Low</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Dynamic Property Grid (1 column on mobile, 2 on tablet, 3 on desktop) -->
+        <div class="row g-4" id="propertyGrid">
+            <!-- Populated via JavaScript -->
+        </div>
+    </div>
+
+    <!-- ================= INDIVIDUAL LISTING VIEW PAGE (Hidden by default) ================= -->
+    <div class="container my-4 d-none" id="singleListingView">
+        <button class="btn btn-outline-secondary btn-sm rounded-pill mb-3" onclick="showHome()">
+            <i class="fa fa-arrow-left me-1"></i> Back to all listings
+        </button>
+        <div id="listingDetailContent">
+            <!-- Populated Dynamically -->
+        </div>
+    </div>
+
+    <!-- ================= OFF-CANVAS FILTER & CATEGORY DRAWER ================= -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="filterDrawer" aria-labelledby="filterDrawerLabel">
+        <div class="offcanvas-header bg-navy text-white">
+            <h5 class="offcanvas-title fw-bold" id="filterDrawerLabel"><i class="fa fa-filter text-primary-custom me-2"></i> Filter Properties & Amenities</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div class="mb-4">
+                <label class="form-label fw-bold text-secondary small text-uppercase">Property Category</label>
+                <select id="filterCategory" class="form-select rounded-pill">
+                    <option value="all">All Categories</option>
+                    <option value="Bedsitter">Bedsitter</option>
+                    <option value="1 Bedroom">1 Bedroom</option>
+                    <option value="2 Bedroom">2 Bedroom</option>
+                    <option value="3 Bedroom">3 Bedroom + DSQ</option>
+                    <option value="Airbnb">Airbnb</option>
+                    <option value="Hotel">Hotel</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold text-secondary small text-uppercase">Location / Neighborhood</label>
+                <select id="filterLocation" class="form-select rounded-pill">
+                    <option value="all">All Locations (Nairobi & Coast)</option>
+                    <option value="Kilimani, Nairobi">Kilimani, Nairobi</option>
+                    <option value="Westlands, Nairobi">Westlands, Nairobi</option>
+                    <option value="Kileleshwa, Nairobi">Kileleshwa, Nairobi</option>
+                    <option value="Nyali, Mombasa">Nyali, Mombasa</option>
+                    <option value="Diani, Kwale">Diani, Kwale</option>
+                    <option value="Ruiru, Kiambu">Ruiru, Kiambu</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold text-secondary small text-uppercase">Max Budget: <span id="budgetLabel" class="text-primary-custom fw-bold">KES 300,000</span></label>
+                <input type="range" class="form-range" id="filterBudget" min="5000" max="300000" step="5000" value="300000" oninput="document.getElementById('budgetLabel').innerText = 'KES ' + Number(this.value).toLocaleString()">
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold text-secondary small text-uppercase">Water & Utility Guarantee</label>
+                <div class="form-check mb-2">
+                    <input class="form-check-input amenity-checkbox" type="checkbox" value="Borehole Water" id="waterBorehole">
+                    <label class="form-check-label small" for="waterBorehole">24/7 Borehole Water Backup</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input amenity-checkbox" type="checkbox" value="Solar Hot Water" id="waterSolar">
+                    <label class="form-check-label small" for="waterSolar">Solar Hot Water System</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input amenity-checkbox" type="checkbox" value="Backup Generator" id="amenityGenerator">
+                    <label class="form-check-label small" for="amenityGenerator">Backup Generator</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input amenity-checkbox" type="checkbox" value="High-Speed Wi-Fi" id="amenityWifi">
+                    <label class="form-check-label small" for="amenityWifi">High-Speed Fibre Wi-Fi</label>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold text-secondary small text-uppercase">AI GIS Proximity Amenity Filter</label>
+                <div class="form-check mb-2">
+                    <input class="form-check-input ai-proximity-checkbox" type="checkbox" value="hospital" id="proxHospital">
+                    <label class="form-check-label small" for="proxHospital"><i class="fa fa-hospital text-danger me-1"></i> Near Hospital (&lt; 2km)</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input ai-proximity-checkbox" type="checkbox" value="school" id="proxSchool">
+                    <label class="form-check-label small" for="proxSchool"><i class="fa fa-graduation-cap text-primary me-1"></i> Near International School</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input ai-proximity-checkbox" type="checkbox" value="mall" id="proxMall">
+                    <label class="form-check-label small" for="proxMall"><i class="fa fa-shopping-cart text-success me-1"></i> Near Shopping Mall / Supermarket</label>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary-custom text-white fw-bold rounded-pill py-2" onclick="applyAdvancedFilters()" data-bs-dismiss="offcanvas">Apply Filters</button>
+                <button class="btn btn-outline-secondary rounded-pill py-2" onclick="clearAllFilters()" data-bs-dismiss="offcanvas">Reset All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= GIS MAP MODAL (GeoDjango Radius Search) ================= -->
+    <div class="modal fade" id="gisModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-navy text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa fa-map-marked-alt text-info me-2"></i> GeoDjango Radius & Coordinate Search</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">Click anywhere on the OpenStreetMap below to drop a pin. Set your desired search radius to query all properties within that perimeter using backend spatial indexing.</p>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-7">
+                            <label class="form-label small fw-bold">Search Radius (Kilometers)</label>
+                            <div class="input-group">
+                                <input type="range" class="form-range align-self-center me-2" id="gisRadiusRange" min="1" max="25" value="5" oninput="document.getElementById('gisRadiusVal').innerText = this.value">
+                                <span class="badge bg-navy px-3 py-2 fs-6"><span id="gisRadiusVal">5</span> km</span>
+                            </div>
+                        </div>
+                        <div class="col-md-5 d-flex align-items-end">
+                            <button class="btn btn-primary-custom text-white w-100 fw-bold rounded-pill" onclick="executeSpatialQuery()">
+                                <i class="fa fa-search-location me-1"></i> Query GeoDjango Radius
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Leaflet GIS Map container -->
+                    <div id="gisMap" class="shadow-sm border mb-3"></div>
+                    <div id="gisResultsSummary" class="alert alert-info py-2 small mb-0 d-none">
+                        <i class="fa fa-info-circle me-1"></i> <span id="gisMatchCount">0</span> properties found within selected radius.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= BOOKING & M-PESA CHECKOUT MODAL ================= -->
+    <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-navy text-white">
+                    <h5 class="modal-title fw-bold" id="bookingModalTitle">Secure Booking & M-Pesa STK Push</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4" id="bookingModalBody">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= TENANCY CONTRACT DOWNLOAD MODAL ================= -->
+    <div class="modal fade" id="contractModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold"><i class="fa fa-file-contract me-2"></i> Official Tenancy / Lease Agreement</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-5 bg-white" id="printableContract">
+                    <!-- Printable Contract Document Content -->
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success rounded-pill px-4 fw-bold" onclick="window.print()"><i class="fa fa-print me-2"></i> Print / Download PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= FLOATING HOST CHAT WIDGET ================= -->
+    <div id="chatWidget" class="card border-0">
+        <div class="card-header bg-navy text-white d-flex justify-content-between align-items-center py-2">
+            <div class="d-flex align-items-center gap-2">
+                <div class="bg-success rounded-circle" style="width: 10px; height: 10px;"></div>
+                <span class="fw-bold small" id="chatHostName">Host / Engineer Support</span>
+            </div>
+            <button class="btn btn-sm text-white p-0 shadow-none" onclick="toggleChatWindow()"><i class="fa fa-times"></i></button>
+        </div>
+        <div class="card-body bg-light p-3" id="chatMessagesBox" style="height: 250px; overflow-y: auto; font-size: 0.85rem;">
+            <div class="text-muted text-center small mb-3">Engineer Verified Live Chat. Ask about water availability, parking, or viewing schedules.</div>
+            <div class="bg-white p-2 rounded shadow-sm mb-2 w-75">
+                Hello! I am the property manager. Feel free to ask any questions regarding water supply or viewing arrangements.
+            </div>
+        </div>
+        <div class="card-footer bg-white p-2 border-top">
+            <div class="input-group">
+                <input type="text" id="chatInputBox" class="form-control form-control-sm border-0 shadow-none" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendChatMessage()">
+                <button class="btn btn-primary-custom btn-sm px-3 text-white" onclick="sendChatMessage()"><i class="fa fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Chat Launcher Button -->
+    <button class="btn btn-navy text-white rounded-circle shadow-lg position-fixed bottom-3 end-3 d-flex align-items-center justify-content-center" style="width: 55px; height: 55px; z-index: 1040; bottom: 20px; right: 20px;" onclick="toggleChatWindow()">
+        <i class="fa fa-comments fs-5"></i>
+    </button>
+
+    <!-- Footer -->
+    <footer class="bg-navy text-white pt-5 pb-3 mt-5">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <h5 class="fw-bold text-white mb-3">LETTO<span class="text-primary-custom">.</span></h5>
+                    <p class="text-white-50 small">Kenya's premier spatial real estate platform powered by GeoDjango, OpenStreetMap, and Engineer-Verified physical audits. Say goodbye to fake listings and unverified agents.</p>
+                </div>
+                <div class="col-md-2">
+                    <h6 class="fw-bold text-white mb-3">Quick Links</h6>
+                    <ul class="list-unstyled small text-white-50 d-flex flex-column gap-2">
+                        <li><a href="#" class="text-decoration-none text-white-50" onclick="selectCategory('Bedsitter', null); showHome();">Bedsitters</a></li>
+                        <li><a href="#" class="text-decoration-none text-white-50" onclick="selectCategory('1 Bedroom', null); showHome();">1 Bedrooms</a></li>
+                        <li><a href="#" class="text-decoration-none text-white-50" onclick="selectCategory('Airbnb', null); showHome();">Airbnbs</a></li>
+                        <li><a href="#" class="text-decoration-none text-white-50" onclick="selectCategory('Hotel', null); showHome();">Hotels</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="fw-bold text-white mb-3">Geo & AI Features</h6>
+                    <ul class="list-unstyled small text-white-50 d-flex flex-column gap-2">
+                        <li><i class="fa fa-check text-success me-1"></i> GeoDjango Radius Queries</li>
+                        <li><i class="fa fa-check text-success me-1"></i> OpenAI Proximity Filter</li>
+                        <li><i class="fa fa-check text-success me-1"></i> M-Pesa STK Express Checkout</li>
+                        <li><i class="fa fa-check text-success me-1"></i> Instant Tenancy PDF Agreement</li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h6 class="fw-bold text-white mb-3">Get Mobile App</h6>
+                    <p class="text-white-50 small">Download the LETTO tenant app for Android & iOS.</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-light btn-sm"><i class="fab fa-apple"></i> App Store</button>
+                        <button class="btn btn-outline-light btn-sm"><i class="fab fa-google-play"></i> Play Store</button>
+                    </div>
+                </div>
+            </div>
+            <hr class="border-secondary my-4">
+            <div class="text-center small text-white-50">
+                &copy; 2026 LETTO Kenya. Engineered with Bootstrap 5, Leaflet GIS, & GeoDjango backend simulation.
+            </div>
+        </div>
+    </footer>
+
+    <!-- JS Libraries -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Comprehensive Dataset of Properties with GIS Coordinates, Water specs, and AI Proximity metadata
+        const properties = [
+            {
+                id: 1,
+                title: "Executive 3 Bedroom Apartment + DSQ",
+                category: "3 Bedroom",
+                type: "Rent",
+                location: "Kilimani, Nairobi",
+                price: 95000,
+                period: "month",
+                image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80",
+                badge: "Engineer Verified",
+                water: "24/7 Borehole Water & Council",
+                lat: -1.2921,
+                lng: 36.7820,
+                amenities: ["Borehole Water", "Solar Hot Water", "Backup Generator", "High-Speed Wi-Fi"],
+                proximity: { hospital: "Nairobi Hospital (1.2 km)", school: "Makini School (0.8 km)", mall: "Yaya Centre (0.5 km)" },
+                host: { name: "Eng. Brian Mutua", phone: "+254 712 345 678", rating: "4.9 (42 reviews)" },
+                description: "Experience modern urban living in Kilimani. This unit features spacious rooms, exquisite wooden flooring, high speed elevators, a backup generator, and guaranteed 24/7 borehole water supply."
+            },
+            {
+                id: 2,
+                title: "Luxury 2 Bedroom Furnished Airbnb",
+                category: "Airbnb",
+                type: "Night",
+                location: "Westlands, Nairobi",
+                price: 6500,
+                period: "night",
+                image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80",
+                badge: "Instant Book",
+                water: "Borehole Storage Tanks",
+                lat: -1.2683,
+                lng: 36.8110,
+                amenities: ["Borehole Water", "High-Speed Wi-Fi", "Solar Hot Water"],
+                proximity: { hospital: "MP Shah Hospital (0.9 km)", school: "Consolata School (1.5 km)", mall: "Sarit Centre (0.4 km)" },
+                host: { name: "Sarah Wanjiru", phone: "+254 722 987 654", rating: "5.0 (18 reviews)" },
+                description: "Stunning executive apartment in Westlands close to Sarit Centre. Fully furnished with Netflix, superfast Wi-Fi, king-size bed, and a rooftop swimming pool."
+            },
+            {
+                id: 3,
+                title: "Modern Cozy Bedsitter with Kitchenette",
+                category: "Bedsitter",
+                type: "Rent",
+                location: "Ruiru, Kiambu",
+                price: 12500,
+                period: "month",
+                image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=800&q=80",
+                badge: "Verified",
+                water: "24/7 Borehole Water",
+                lat: -1.1491,
+                lng: 36.9631,
+                amenities: ["Borehole Water", "High-Speed Wi-Fi"],
+                proximity: { hospital: "Ruiru Level 4 (1.1 km)", school: " Kenyatta University (3.0 km)", mall: "Spur Mall (2.0 km)" },
+                host: { name: "Peter Kamau", phone: "+254 733 112 233", rating: "4.8 (30 reviews)" },
+                description: "Secure, clean, and well-lit bedsitter in Ruiru with tiled floors, instant shower, adequate wardrobe space, and constant borehole water."
+            },
+            {
+                id: 4,
+                title: "Spacious 1 Bedroom Apartment",
+                category: "1 Bedroom",
+                type: "Rent",
+                location: "Kileleshwa, Nairobi",
+                price: 42000,
+                period: "month",
+                image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80",
+                badge: "Engineer Verified",
+                water: "Council & Borehole",
+                lat: -1.2820,
+                lng: 36.7750,
+                amenities: ["Borehole Water", "Solar Hot Water", "Backup Generator"],
+                proximity: { hospital: "Aga Khan Medical Centre (1.4 km)", school: "Lavington Primary (1.0 km)", mall: "Kasuku Centre (0.6 km)" },
+                host: { name: "Cynthia Akinyi", phone: "+254 745 667 889", rating: "4.9 (55 reviews)" },
+                description: "Quiet and serene 1-bedroom apartment in Kileleshwa featuring a balcony with scenic garden views, ample parking, and strict 24/7 security."
+            },
+            {
+                id: 5,
+                title: "Beachfront 3 Bedroom Villa & Pool",
+                category: "Airbnb",
+                type: "Night",
+                location: "Nyali, Mombasa",
+                price: 18000,
+                period: "night",
+                image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=800&q=80",
+                badge: "Superhost",
+                water: "Desalination & Borehole",
+                lat: -4.0435,
+                lng: 39.7181,
+                amenities: ["Borehole Water", "Solar Hot Water", "High-Speed Wi-Fi", "Backup Generator"],
+                proximity: { hospital: "Coast General Hospital (3.2 km)", school: "Nyali Primary (1.2 km)", mall: "City Mall Nyali (0.9 km)" },
+                host: { name: "Juma Ali", phone: "+254 711 223 344", rating: "4.95 (80 reviews)" },
+                description: "Luxurious beach villa in Nyali with direct access to white sandy beaches, private swimming pool, and ocean breeze."
+            },
+            {
+                id: 6,
+                title: "Grand Royale Boutique Hotel Suite",
+                category: "Hotel",
+                type: "Night",
+                location: "Westlands, Nairobi",
+                price: 12000,
+                period: "night",
+                image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80",
+                badge: "Hotel Partner",
+                water: "24/7 Municipal & Backup",
+                lat: -1.2650,
+                lng: 36.8020,
+                amenities: ["Borehole Water", "Solar Hot Water", "Backup Generator", "High-Speed Wi-Fi"],
+                proximity: { hospital: "Nairobi West Hospital (2.0 km)", school: "Strathmore (3.5 km)", mall: "Westgate Mall (0.5 km)" },
+                host: { name: "Grand Royale Desk", phone: "+254 700 000 111", rating: "4.7 (110 reviews)" },
+                description: "5-star luxury hotel suite offering complimentary breakfast, room service, gym access, steam bath, and executive lounge."
+            }
+        ];
+
+        let currentFilteredProperties = [...properties];
+        let activeCategory = 'all';
+        let map = null;
+        let userMarker = null;
+        let radiusCircle = null;
+
+        // Initialize App
+        $(document).ready(function() {
+            renderProperties(properties);
+            updateFilterBadges();
+        });
+
+        // Render Property Cards
+        function renderProperties(list) {
+            const grid = $('#propertyGrid');
+            grid.empty();
+            $('#listingCount').text(list.length);
+
+            if(list.length === 0) {
+                grid.html(`
+                    <div class="col-12 text-center py-5">
+                        <div class="text-muted fs-4 mb-2"><i class="fa fa-search fa-2x"></i></div>
+                        <h5 class="fw-bold text-secondary">No properties match your filter criteria</h5>
+                        <p class="text-muted small">Try adjusting your budget, location, or clearing GIS filters.</p>
+                        <button class="btn btn-outline-dark btn-sm rounded-pill mt-2" onclick="clearAllFilters()">Reset All Filters</button>
+                    </div>
+                `);
+                return;
+            }
+
+            list.forEach(p => {
+                grid.append(`
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="card property-card h-100 rounded-4 overflow-hidden shadow-sm bg-white" onclick="viewPropertyDetail(${p.id})">
+                            <div class="property-img-wrapper">
+                                <img src="${p.image}" alt="${p.title}">
+                                <span class="position-absolute top-0 start-0 m-3 verified-badge">
+                                    <i class="fa fa-shield-check text-info me-1"></i> ${p.badge}
+                                </span>
+                                <span class="position-absolute bottom-0 start-0 m-3 badge bg-dark bg-opacity-75 text-white small">
+                                    <i class="fa fa-tint text-info me-1"></i> ${p.water}
+                                </span>
+                            </div>
+                            <div class="card-body d-flex flex-column p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="badge bg-light text-secondary border small">${p.category}</span>
+                                    <span class="text-muted small"><i class="fa fa-map-marker-alt text-danger me-1"></i> ${p.location}</span>
+                                </div>
+                                <h5 class="card-title fw-bold text-navy fs-6 mb-2 text-truncate">${p.title}</h5>
+                                <div class="d-flex align-items-baseline gap-1 mb-3">
+                                    <span class="fs-5 fw-bold text-primary-custom">KES ${p.price.toLocaleString()}</span>
+                                    <span class="text-muted small">/ ${p.period}</span>
+                                </div>
+                                <div class="mt-auto d-flex gap-2">
+                                    <button class="btn btn-outline-dark btn-sm rounded-pill w-50 fw-semibold" onclick="event.stopPropagation(); viewPropertyDetail(${p.id})">View Details</button>
+                                    <button class="btn btn-primary-custom btn-sm rounded-pill w-50 text-white fw-semibold" onclick="event.stopPropagation(); openBookingModal(${p.id})">Book / Pay</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            });
+        }
+
+        // Select Category from top tab
+        function selectCategory(cat, btnElement) {
+            activeCategory = cat;
+            if(btnElement) {
+                $('#categoryTabs button').removeClass('active border-bottom border-3 border-danger text-dark').addClass('text-muted');
+                $(btnElement).addClass('active border-bottom border-3 border-danger text-dark').removeClass('text-muted');
+            }
+            $('#filterCategory').val(cat);
+            applyAdvancedFilters();
+        }
+
+        // Apply Advanced Filters from Drawer
+        function applyAdvancedFilters() {
+            const cat = $('#filterCategory').val();
+            const loc = $('#filterLocation').val();
+            const maxBudget = parseInt($('#filterBudget').val());
+            
+            // Collect checked water/amenities
+            const selectedAmenities = [];
+            $('.amenity-checkbox:checked').each(function() {
+                selectedAmenities.push($(this).val());
+            });
+
+            // Collect AI proximity filters
+            const selectedProx = [];
+            $('.ai-proximity-checkbox:checked').each(function() {
+                selectedProx.push($(this).val());
+            });
+
+            currentFilteredProperties = properties.filter(p => {
+                let matchCat = (cat === 'all' || p.category === cat);
+                let matchLoc = (loc === 'all' || p.location === loc);
+                let matchBudget = (p.price <= maxBudget);
+                
+                let matchAmenities = selectedAmenities.every(a => p.amenities.includes(a));
+                let matchProx = selectedProx.every(pr => p.proximity[pr]);
+
+                return matchCat && matchLoc && matchBudget && matchAmenities && matchProx;
+            });
+
+            renderProperties(currentFilteredProperties);
+            updateFilterBadges();
+
+            if(cat !== 'all' || loc !== 'all' || maxBudget < 300000 || selectedAmenities.length > 0 || selectedProx.length > 0) {
+                $('#activeFilterAlert').removeClass('d-none').addClass('d-flex');
+                $('#filterDescription').text(`${cat !== 'all' ? cat : 'All Categories'} | ${loc !== 'all' ? loc : 'All Locations'} | Max: KES ${maxBudget.toLocaleString()}`);
+            } else {
+                $('#activeFilterAlert').removeClass('d-flex').addClass('d-none');
+            }
+        }
+
+        // Clear Filters
+        function clearAllFilters() {
+            $('#filterCategory').val('all');
+            $('#filterLocation').val('all');
+            $('#filterBudget').val(300000);
+            $('#budgetLabel').text('KES 300,000');
+            $('.amenity-checkbox').prop('checked', false);$('.ai-proximity-checkbox').prop('checked', false);
+            activeCategory = 'all';
+            $('#categoryTabs button').first().click();
+            currentFilteredProperties = [...properties];
+            renderProperties(properties);
+            $('#activeFilterAlert').removeClass('d-flex').addClass('d-none');
+            updateFilterBadges();
+        }
+
+        function updateFilterBadges() {
+            let count = 0;
+            if($('#filterCategory').val() !== 'all') count++;
+            if($('#filterLocation').val() !== 'all') count++;
+            if(parseInt($('#filterBudget').val()) < 300000) count++;
+            count += $('.amenity-checkbox:checked').length;
+            count += $('.ai-proximity-checkbox:checked').length;
+
+            $('#mobileFilterCount').text(count);
+            $('#desktopFilterCount').text(count);
+        }
+
+        // Sort Listings
+        function sortListings(criteria) {
+            if(criteria === 'price-low') {
+                currentFilteredProperties.sort((a, b) => a.price - b.price);
+            } else if(criteria === 'price-high') {
+                currentFilteredProperties.sort((a, b) => b.price - a.price);
+            } else {
+                currentFilteredProperties.sort((a, b) => a.id - b.id);
+            }
+            renderProperties(currentFilteredProperties);
+        }
+
+        // ================= INDIVIDUAL LISTING VIEW =================
+        function viewPropertyDetail(id) {
+            const p = properties.find(item => item.id === id);
+            if(!p) return;
+
+            $('#mainAppContainer').addClass('d-none');
+            $('#singleListingView').removeClass('d-none');
+            window.scrollTo({top: 0, behavior: 'smooth'});
+
+            let amenitiesHtml = p.amenities.map(a => `<span class="badge bg-light text-dark border px-3 py-2"><i class="fa fa-check text-success me-1"></i> ${a}</span>`).join('');
+            let proxHtml = Object.entries(p.proximity).map(([key, val]) => `<li class="small text-muted mb-1"><strong class="text-capitalize">${key}:</strong> ${val}</li>`).join('');
+
+            $('#listingDetailContent').html(`
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <div class="position-relative rounded-4 overflow-hidden shadow-sm mb-4" style="height: 400px;">
+                            <img src="${p.image}" class="w-100 h-100 object-fit-cover" alt="${p.title}">
+                            <span class="position-absolute top-0 start-0 m-3 verified-badge px-3 py-2">
+                                <i class="fa fa-shield-check text-info me-1"></i> ${p.badge}
+                            </span>
+                        </div>
+                        <h2 class="fw-bold text-navy mb-2">${p.title}</h2>
+                        <p class="text-muted mb-3"><i class="fa fa-map-marker-alt text-danger me-1"></i> ${p.location} (GIS Verified Coordinates: ${p.lat}, ${p.lng})</p>
+                        
+                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                            <h5 class="fw-bold text-navy mb-3">Property Description & Engineer Audit</h5>
+                            <p class="text-secondary small line-height-lg">${p.description}</p>
+                            <div class="alert alert-info py-2 small mb-0">
+                                <i class="fa fa-tint text-primary me-1"></i> <strong>Water Guarantee:</strong> ${p.water} verified on-site by LETTO physical inspection engineers.
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                            <h5 class="fw-bold text-navy mb-3">Amenities & Utilities</h5>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                ${amenitiesHtml}
+                            </div>
+                        </div>
+
+                        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                            <h5 class="fw-bold text-navy mb-3"><i class="fa fa-robot text-primary me-2"></i> AI Proximity Analysis (Nearby Landmarks)</h5>
+                            <ul class="list-unstyled mb-0">
+                                ${proxHtml}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card border-0 shadow-sm rounded-4 p-4 sticky-top bg-white" style="top: 100px;">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <span class="fs-3 fw-bold text-primary-custom">KES ${p.price.toLocaleString()}</span>
+                                    <span class="text-muted small">/ ${p.period}</span>
+                                </div>
+                                <span class="badge bg-success bg-opacity-10 text-success px-2 py-1">Available Now</span>
+                            </div>
+
+                            <hr class="text-muted">
+
+                            <div class="d-flex align-items-center gap-3 mb-4">
+                                <div class="bg-navy text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 50px; height: 50px; font-size: 1.2rem;">
+                                    ${p.host.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-0 text-navy">${p.host.name}</h6>
+                                    <p class="text-muted small mb-0"><i class="fa fa-star text-warning me-1"></i> ${p.host.rating}</p>
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-3">
+                                <button class="btn btn-primary-custom text-white fw-bold rounded-pill py-3 shadow-sm" onclick="openBookingModal(${p.id})">
+                                    <i class="fa fa-lock me-2"></i> Secure Book / M-Pesa Deposit
+                                </button>
+                                <button class="btn btn-outline-dark rounded-pill py-2 fw-semibold" onclick="startHostChat('${p.host.name}')">
+                                    <i class="fa fa-comment-dots text-success me-2"></i> Chat with Host
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+
+        function showHome() {
+            $('#singleListingView').addClass('d-none');
+            $('#mainAppContainer').removeClass('d-none');
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        // ================= GIS MAP MODAL & RADIUS SEARCH =================
+        function openGisModal() {
+            const gisModal = new bootstrap.Modal(document.getElementById('gisModal'));
+            gisModal.show();
+            
+            // Initialize Leaflet map after modal is fully shown to avoid rendering bugs
+            setTimeout(() => {
+                if(!map) {
+                    map = L.map('gisMap').setView([-1.2921, 36.8219], 12);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap contributors'
+                    }).addTo(map);
+
+                    map.on('click', function(e) {
+                        setGisSearchPoint(e.latlng.lat, e.latlng.lng);
+                    });
+                } else {
+                    map.invalidateSize();
+                }
+            }, 300);
+        }
+
+        function setGisSearchPoint(lat, lng) {
+            const radiusKm = parseFloat($('#gisRadiusRange').val());
+            
+            if(userMarker) map.removeLayer(userMarker);
+            if(radiusCircle) map.removeLayer(radiusCircle);
+
+            userMarker = L.marker([lat, lng]).addTo(map).bindPopup("<b>GIS Search Center</b>").openPopup();
+            radiusCircle = L.circle([lat, lng], {
+                radius: radiusKm * 1000,
+                color: '#FF385C',
+                fillColor: '#FF385C',
+                fillOpacity: 0.15
+            }).addTo(map);
+
+            map.setView([lat, lng], 13);
+        }
+
+        function executeSpatialQuery() {
+            if(!userMarker) {
+                // Default to Nairobi Center if no pin clicked
+                setGisSearchPoint(-1.2921, 36.8219);
+            }
+            const center = userMarker.getLatLng();
+            const radiusKm = parseFloat($('#gisRadiusRange').val());
+
+            // Haversine distance simulation matching GeoDjango spatial lookup (GIS DWithin)
+            const matched = properties.filter(p => {
+                let dist = getDistanceFromLatLonInKm(center.lat, center.lng, p.lat, p.lng);
+                return dist <= radiusKm;
+            });
+
+            currentFilteredProperties = matched;
+            renderProperties(matched);
+            $('#gisResultsSummary').removeClass('d-none');
+            $('#gisMatchCount').text(matched.length);
+
+            // Close modal and scroll to results
+            bootstrap.Modal.getInstance(document.getElementById('gisModal')).hide();
+            window.scrollTo({top: 400, behavior: 'smooth'});
+        }
+
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            let R = 6371; // Radius of the earth in km
+            let dLat = deg2rad(lat2-lat1);
+            let dLon = deg2rad(lon2-lon1);
+            let a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2)
+                ; 
+            let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+            return R * c;
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI/180);
+        }
+
+        // ================= M-PESA CHECKOUT & TENANCY CONTRACT =================
+        let selectedPropertyForBooking = null;
+
+        function openBookingModal(id) {
+            const p = properties.find(item => item.id === id);
+            if(!p) return;
+            selectedPropertyForBooking = p;
+
+            let depositAmount = p.category === 'Airbnb' || p.category === 'Hotel' ? p.price : Math.round(p.price * 0.5);
+
+            $('#bookingModalTitle').text(`Book & Pay Deposit: ${p.title}`);
+            $('#bookingModalBody').html(`
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Property:</span>
+                        <span class="fw-bold text-navy">${p.title}</span>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Location:</span>
+                        <span class="fw-bold text-navy">${p.location}</span>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Water Guarantee:</span>
+                        <span class="fw-bold text-success">${p.water}</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fw-bold">Required Deposit (M-Pesa):</span>
+                        <span class="fw-bold fs-5 text-primary-custom">KES ${depositAmount.toLocaleString()}</span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Full Legal Name (for Lease Agreement)</label>
+                    <input type="text" id="tenantFullName" class="form-control rounded-pill" placeholder="e.g. Moses Njuguna">
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Safaricom M-Pesa Phone Number (+254)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0 rounded-start-pill">+254</span>
+                        <input type="tel" id="mpesaPhoneNum" class="form-control border-start-0 rounded-end-pill" placeholder="712345678" value="712345678">
+                    </div>
+                </div>
+
+                <div id="stkPushLoader" class="text-center d-none mb-3">
+                    <div class="spinner-border text-success spinner-border-sm me-2" role="status"></div>
+                    <span class="small text-muted">Sending M-Pesa STK Push to your phone... Enter PIN.</span>
+                </div>
+
+                <div class="d-grid">
+                    <button class="btn btn-success text-white fw-bold rounded-pill py-3" onclick="triggerStkPush(${depositAmount})">
+                        <i class="fa fa-mobile-alt me-2"></i> Pay KES ${depositAmount.toLocaleString()} via M-Pesa
+                    </button>
+                </div>
+            `);
+
+            const modal = new bootstrap.Modal(document.getElementById('bookingModal'));
+            modal.show();
+        }
+
+        function triggerStkPush(amount) {
+            const phone = $('#mpesaPhoneNum').val();
+            const fullName = $('#tenantFullName').val();
+
+            if(!fullName.trim()) {
+                alert("Please enter your full name for the tenancy agreement.");
+                return;
+            }
+            if(!phone || phone.length < 9) {
+                alert("Please enter a valid Safaricom phone number.");
+                return;
+            }
+
+            $('#stkPushLoader').removeClass('d-none');
+
+            setTimeout(() => {
+                $('#stkPushLoader').addClass('d-none');
+                bootstrap.Modal.getInstance(document.getElementById('bookingModal')).hide();
+                
+                // Generate Contract and open contract modal
+                generateTenancyContract(selectedPropertyForBooking, fullName, amount, phone);
+            }, 2500);
+        }
+
+        function generateTenancyContract(p, tenantName, amountPaid, phone) {
+            const today = new Date().toLocaleDateString('en-KE', { year: 'numeric', month: 'long', day: 'numeric' });
+            const txCode = 'LETTO' + Math.floor(10000000 + Math.random() * 90000000);
+
+            $('#printableContract').html(`
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold text-navy">LETTO SPATIAL PROPERTIES</h3>
+                    <p class="text-muted small">Official Tenancy & Occupancy Lease Agreement (GeoDjango Verified)</p>
+                    <hr>
+                </div>
+                <div class="small lh-lg">
+                    <p><strong>Agreement Date:</strong> ${today}</p>
+                    <p><strong>Property Name:</strong> ${p.title}</p>
+                    <p><strong>Location & Coordinates:</strong> ${p.location} (Lat: ${p.lat}, Lng: ${p.lng})</p>
+                    <p><strong>Tenant Name:</strong> ${tenantName} (Phone: +254 ${phone})</p>
+                    <p><strong>Water Utility Clause:</strong> Landlord guarantees constant supply of <em>${p.water}</em> throughout the tenancy period.</p>
+                    <p><strong>Financial Summary:</strong> Total Rate: KES ${p.price.toLocaleString()} / ${p.period}. Deposit Paid: <strong>KES ${amountPaid.toLocaleString()}</strong>.</p>
+                    <p><strong>M-Pesa Transaction Confirmation Code:</strong> <span class="text-success fw-bold">${txCode}</span></p>
+                    <br>
+                    <p>By downloading or printing this signed digital contract, both parties agree to the standard Kenyan residential tenancy terms and conditions, including deposit refund terms and utility maintenance schedules.</p>
+                    <br><br>
+                    <div class="row mt-5">
+                        <div class="col-6">
+                            <p>___________________________________<br><strong>Landlord / Managing Agent</strong></p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <p>___________________________________<br><strong>Tenant Signature (${tenantName})</strong></p>
+                        </div>
+                    </div>
+                </div>
+            `);
+
+            const contractModal = new bootstrap.Modal(document.getElementById('contractModal'));
+            contractModal.show();
+        }
+
+        // ================= CHAT WIDGET LOGIC =================
+        function toggleChatWindow() {
+            $('#chatWidget').toggle();
+        }
+
+        function startHostChat(hostName) {
+            $('#chatHostName').text(hostName);
+            $('#chatWidget').show();
+        }
+
+        function sendChatMessage() {
+            const input = $('#chatInputBox');
+            const text = input.val().trim();
+            if(!text) return;
+
+            $('#chatMessagesBox').append(`
+                <div class="bg-primary-custom text-white p-2 rounded shadow-sm ms-auto mb-2 w-75 text-end">
+                    ${text}
+                </div>
+            `);
+            input.val('');
+            $('#chatMessagesBox').scrollTop($('#chatMessagesBox')[0].scrollHeight);
+
+            // Simulate automatic host reply
+            setTimeout(() => {
+                $('#chatMessagesBox').append(`
+                    <div class="bg-white p-2 rounded shadow-sm mb-2 w-75">
+                        Thanks for reaching out! Our field engineer confirmed water and utilities are 100% active. Would you like to schedule a physical viewing?
+                    </div>
+                `);
+                $('#chatMessagesBox').scrollTop($('#chatMessagesBox')[0].scrollHeight);
+            }, 1200);
+        }
+    </script>
+</body>
+</html>
